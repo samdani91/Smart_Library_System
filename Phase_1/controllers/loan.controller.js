@@ -1,5 +1,6 @@
 import Loan from '../models/Loan.js';
-import { getBook } from './book.controller.js';
+import { getBook, countBooks, countAvailableBooks } from './book.controller.js';
+import { countUsers } from './user.controller.js';
 
 export const issueBook = async (req, res) => {
     try {
@@ -241,5 +242,29 @@ export const countReturnsToday = async () => {
         });
     } catch (error) {
         throw new Error("Error counting returns today: " + error.message);
+    }
+};
+
+export const getStatsOverview = async (req, res) => {
+    try {
+        const totalBooks = await countBooks();
+        const totalUsers = await countUsers();
+        const booksAvailable = await countAvailableBooks();
+        const booksBorrowed = await countActiveLoans();
+        const overdueLoans = await countOverdueLoans();
+        const loansToday = await countLoansToday();
+        const returnsToday = await countReturnsToday();
+
+        res.status(200).json({
+            total_books: totalBooks,
+            total_users: totalUsers,
+            books_available: booksAvailable,
+            books_borrowed: booksBorrowed,
+            overdue_loans: overdueLoans,
+            loans_today: loansToday,
+            returns_today: returnsToday
+        });
+    } catch (error) {
+        res.status(500).json({ message: "Error fetching stats overview", error: error.message });
     }
 };

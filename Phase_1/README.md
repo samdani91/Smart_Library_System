@@ -52,11 +52,11 @@ This version is ideal for simple deployments where services are tightly coupled 
 ### 📘 Core API Endpoints & Sample JSON Format
 
 #### 👥 User Management
-| Method | Endpoint              | Description                      |
-|--------|-----------------------|----------------------------------|
-| POST   | `/api/users`          | Register a new user              |
-| GET    | `/api/users/:id`      | Get user details by ID           |
-
+| Method | Endpoint                   | Description                      |
+|--------|-----------------------     |----------------------------------|
+| POST   | `/api/users`               | Register a new user              |
+| GET    | `/api/users/:id`           | Get user details by ID           |
+| GET    | `/api/users/stats/active`  | Get the most active users        |
 
 #### Request: (POST `/api/users`)
 ```json
@@ -69,13 +69,14 @@ This version is ideal for simple deployments where services are tightly coupled 
 ```
 
 #### 📚 Book Management
-| Method | Endpoint              | Description                      |
-|--------|-----------------------|----------------------------------|
-| POST   | `/api/books`          | Add a new book                   |
-| GET    | `/api/books/search?=clean`   | Search books by title/author/etc |
-| GET    | `/api/books/:id`      | Get book details by ID           |
-| PUT    | `/api/books/:id`      | Update book info                 |
-| DELETE | `/api/books/:id`      | Remove book from catalog         |
+| Method | Endpoint                   | Description                      |
+|--------|-----------------------     |----------------------------------|
+| POST   | `/api/books`               | Add a new book                   |
+| GET    | `/api/books/search?=clean` | Search books by title/author/etc |
+| GET    | `/api/books/:id`           | Get book details by ID           |
+| PUT    | `/api/books/:id`           | Update book info                 |
+| DELETE | `/api/books/:id`           | Remove book from catalog         |
+| GET    | `/api/books/stats/popular` | Get the most borrowed books      |
 
 #### Request: (POST `/api/books`)
 ```json
@@ -98,13 +99,14 @@ This version is ideal for simple deployments where services are tightly coupled 
 
 
 #### 🔁 Loan Management
-| Method | Endpoint              | Description                      |
-|--------|-----------------------|----------------------------------|
-| POST   | `/api/loans`          | Issue a book to a user           |
-| PUT    | `/api/loans/returns`  | Return a loaned book             |
-| GET    | `/api/loans/:user_id` | View loan history for a user     |
-| GET    | `/api/loans/overdue`  | List all overdue loans  |
-| PUT    | `/api/loans/:id/extend`  | Extend the due date for a loan  |
+| Method | Endpoint                     | Description                      |
+|--------|-----------------------       |----------------------------------|
+| POST   | `/api/loans`                 | Issue a book to a user           |
+| PUT    | `/api/loans/returns`         | Return a loaned book             |
+| GET    | `/api/loans/:user_id`        | View loan history for a user     |
+| GET    | `/api/loans/overdue`         | List all overdue loans           |
+| PUT    | `/api/loans/:id/extend`      | Extend the due date for a loan   |
+| GET    | `/api/loans/stats/overview`  | Get system overview statistics   |
 
 #### Request: (POST `/api/loans`)
 ```json
@@ -130,16 +132,6 @@ This version is ideal for simple deployments where services are tightly coupled 
 }
 
 ```
-
-#### 📊 Statistics & Reports
-| Method | Endpoint              | Description                      |
-|--------|-----------------------|----------------------------------|
-| GET    | `/api/stats/books/popular` | Get the most borrowed books       |
-| GET    | `/api/stats/overview` | Get system overview statistics       |
-| GET    | `/api/stats/users/active` | Get the most active users        |
-
----
-
 
 ## Run Locally
 

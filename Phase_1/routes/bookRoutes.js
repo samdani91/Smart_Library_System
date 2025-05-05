@@ -4,7 +4,8 @@ import {
     searchBooks,
     getBookById,
     updateBook,
-    deleteBook
+    deleteBook,
+    getPopularBooks
 } from '../controllers/book.controller.js';
 
 const router = express.Router();
@@ -14,5 +15,6 @@ router.get('/', searchBooks);
 router.get('/:id', getBookById);
 router.put('/:id', updateBook);
 router.delete('/:id', deleteBook);
+router.get('/stats/popular', getPopularBooks);
 
 export default router;

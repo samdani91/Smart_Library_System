@@ -1,5 +1,5 @@
 import Book from '../models/Book.js';
-
+import { getLoanCountsByBook } from './loan.controller.js';
 
 export const addBook = async (req, res) => {
     try {
@@ -95,5 +95,28 @@ export const countAvailableBooks = async () => {
         return books.length;
     } catch (error) {
         throw new Error("Error counting available books: " + error.message);
+    }
+};
+
+export const getPopularBooks = async (req, res) => {
+    try {
+        const loanCounts = await getLoanCountsByBook();
+        const popularBooks = [];
+
+        for (const loan of loanCounts.slice(0, 5)) {
+            const bookResponse = await getBook(loan._id);
+            if (bookResponse.book) {
+                popularBooks.push({
+                    book_id: loan._id,
+                    title: bookResponse.book.title,
+                    author: bookResponse.book.author,
+                    borrow_count: loan.borrow_count
+                });
+            }
+        }
+
+        res.status(200).json(popularBooks);
+    } catch (error) {
+        res.status(500).json({ message: "Error fetching popular books", error: error.message });
     }
 };
