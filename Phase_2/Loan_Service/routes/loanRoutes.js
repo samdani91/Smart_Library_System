@@ -19,8 +19,8 @@ router.get('/stats/overview', getStatsOverview);
 router.get('/book-stats', getLoanCountsByBook);
 router.get('/active-users', getActiveLoansByUser);
 router.get('/user/:user_id', getLoansByUser);
-router.get('/:id', getLoanById);
 router.get('/overdue', getOverdueLoans);
+router.get('/:id', getLoanById);
 router.put('/:id/extend', extendLoan);
 
 
