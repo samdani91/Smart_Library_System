@@ -1,22 +1,73 @@
 import Loan from '../models/Loan.js';
 import axios from 'axios';
 
+
+const CircuitBreakerStates = {
+    CLOSED: 'CLOSED',
+    OPEN: 'OPEN',
+    HALF_OPEN: 'HALF_OPEN'
+};
+
+
+class CircuitBreaker {
+    constructor(serviceName, timeout = 5000) {
+        this.serviceName = serviceName;
+        this.state = CircuitBreakerStates.CLOSED;
+        this.failureCount = 0;
+        this.failureThreshold = 3;
+        this.resetAfter = 30000; // 30 seconds
+        this.timeout = timeout;
+        this.lastFailureTime = null;
+    }
+
+    async execute(requestFn) {
+        if (this.state === CircuitBreakerStates.OPEN) {
+            if (Date.now() - this.lastFailureTime > this.resetAfter) {
+                this.state = CircuitBreakerStates.HALF_OPEN;
+            }
+            throw new Error(`${this.serviceName} service circuit breaker is ${this.state}`);
+        }
+
+
+        try {
+            const response = await requestFn();
+            if (this.state === CircuitBreakerStates.HALF_OPEN) {
+                this.state = CircuitBreakerStates.CLOSED;
+                this.failureCount = 0;
+            }
+            return response;
+        } catch (error) {
+            this.failureCount++;
+            this.lastFailureTime = Date.now();
+            
+            if (this.failureCount >= this.failureThreshold) {
+                this.state = CircuitBreakerStates.OPEN;
+            }
+            
+            throw error;
+        }
+    }
+}
+
+const userServiceBreaker = new CircuitBreaker('UserService');
+const bookServiceBreaker = new CircuitBreaker('BookService');
+
 export const issueBook = async (req, res) => {
     try {
         const { user_id, book_id, due_date } = req.body;
 
         // Validate user
-        const userResponse = await axios.get(`http://localhost:8081/api/users/${user_id}`).catch(() => {
-            throw new Error("User Service unavailable");
-        });
+        const userResponse = await userServiceBreaker.execute(() =>
+            axios.get(`http://user-service:8081/api/users/${user_id}`, { timeout: 5000 })
+        );
         if (userResponse.status !== 200) {
             return res.status(404).json({ message: "User not found" });
         }
 
         // Validate book
-        const bookResponse = await axios.get(`http://localhost:8082/api/books/${book_id}`).catch(() => {
-            throw new Error("Book Service unavailable");
-        });
+        const bookResponse = await bookServiceBreaker.execute(() =>
+            axios.get(`http://book-service:8082/api/books/${book_id}`, { timeout: 5000 })
+        );
         if (bookResponse.status !== 200) {
             return res.status(404).json({ message: "Book not found" });
         }
@@ -26,11 +77,11 @@ export const issueBook = async (req, res) => {
         }
 
         // Update book availability
-        await axios.patch(`http://localhost:8082/api/books/${book_id}/availability`, {
-            operation: "decrement"
-        }).catch(() => {
-            throw new Error("Book Service unavailable");
-        });
+        await bookServiceBreaker.execute(() =>
+            axios.patch(`http://book-service:8082/api/books/${book_id}/availability`, {
+                operation: "decrement"
+            }, { timeout: 5000 })
+        );
 
         // Create loan
         const loan = new Loan({
@@ -50,7 +101,7 @@ export const issueBook = async (req, res) => {
             status: loan.status
         });
     } catch (error) {
-        res.status(error.message.includes("Service unavailable") ? 503 : 500).json({
+        res.status(error.message.includes('circuit breaker is OPEN') ? 503 : 500).json({
             message: "Error issuing book",
             error: error.message
         });
@@ -66,11 +117,11 @@ export const returnBook = async (req, res) => {
         }
 
         // Update book availability
-        await axios.patch(`http://localhost:8082/api/books/${loan.book_id}/availability`, {
-            operation: "increment"
-        }).catch(() => {
-            throw new Error("Book Service unavailable");
-        });
+        await bookServiceBreaker.execute(() =>
+            axios.patch(`http://book-service:8082/api/books/${loan.book_id}/availability`, {
+                operation: "increment"
+            }, { timeout: 5000 })
+        );
 
         // Update loan
         loan.return_date = new Date();
@@ -87,7 +138,7 @@ export const returnBook = async (req, res) => {
             status: loan.status
         });
     } catch (error) {
-        res.status(error.message.includes("Service unavailable") ? 503 : 500).json({
+        res.status(error.message.includes('circuit breaker is OPEN') ? 503 : 500).json({
             message: "Error returning book",
             error: error.message
         });
@@ -100,9 +151,9 @@ export const getLoansByUser = async (req, res) => {
 
         const loanResponse = [];
         for (const loan of loans) {
-            const bookResponse = await axios.get(`http://localhost:8082/api/books/${loan.book_id}`).catch(() => {
-                throw new Error("Book Service unavailable");
-            });
+            const bookResponse = await bookServiceBreaker.execute(() =>
+                axios.get(`http://book-service:8082/api/books/${loan.book_id}`, { timeout: 5000 })
+            );
             const book = bookResponse.data;
             loanResponse.push({
                 id: loan._id,
@@ -123,7 +174,7 @@ export const getLoansByUser = async (req, res) => {
             total: loanResponse.length
         });
     } catch (error) {
-        res.status(error.message.includes("Service unavailable") ? 503 : 500).json({
+        res.status(error.message.includes('circuit breaker is OPEN') ? 503 : 500).json({
             message: "Error fetching loans",
             error: error.message
         });
@@ -138,12 +189,12 @@ export const getLoanById = async (req, res) => {
         }
 
         const [userResponse, bookResponse] = await Promise.all([
-            axios.get(`http://localhost:8081/api/users/${loan.user_id}`).catch(() => {
-                throw new Error("User Service unavailable");
-            }),
-            axios.get(`http://localhost:8082/api/books/${loan.book_id}`).catch(() => {
-                throw new Error("Book Service unavailable");
-            })
+            userServiceBreaker.execute(() =>
+                axios.get(`http://user-service:8081/api/users/${loan.user_id}`, { timeout: 5000 })
+            ),
+            bookServiceBreaker.execute(() =>
+                axios.get(`http://book-service:8082/api/books/${loan.book_id}`, { timeout: 5000 })
+            )
         ]);
 
         const user = userResponse.data;
@@ -167,7 +218,7 @@ export const getLoanById = async (req, res) => {
             status: loan.status
         });
     } catch (error) {
-        res.status(error.message.includes("Service unavailable") ? 503 : 500).json({
+        res.status(error.message.includes('circuit breaker is OPEN') ? 503 : 500).json({
             message: "Error fetching loan",
             error: error.message
         });
@@ -185,12 +236,12 @@ export const getOverdueLoans = async (req, res) => {
         const overdueResponse = [];
         for (const loan of overdueLoans) {
             const [userResponse, bookResponse] = await Promise.all([
-                axios.get(`http://localhost:8081/api/users/${loan.user_id}`).catch(() => {
-                    throw new Error("User Service unavailable");
-                }),
-                axios.get(`http://localhost:8082/api/books/${loan.book_id}`).catch(() => {
-                    throw new Error("Book Service unavailable");
-                })
+                userServiceBreaker.execute(() =>
+                    axios.get(`http://user-service:8081/api/users/${loan.user_id}`, { timeout: 5000 })
+                ),
+                bookServiceBreaker.execute(() =>
+                    axios.get(`http://book-service:8082/api/books/${loan.book_id}`, { timeout: 5000 })
+                )
             ]);
 
             const user = userResponse.data;
@@ -216,7 +267,7 @@ export const getOverdueLoans = async (req, res) => {
 
         res.status(200).json(overdueResponse);
     } catch (error) {
-        res.status(error.message.includes("Service unavailable") ? 503 : 500).json({
+        res.status(error.message.includes('circuit breaker is OPEN') ? 503 : 500).json({
             message: "Error fetching overdue loans",
             error: error.message
         });
@@ -252,7 +303,6 @@ export const extendLoan = async (req, res) => {
         res.status(500).json({ message: "Error extending loan", error: error.message });
     }
 };
-
 
 export const getLoanCountsByBook = async (req, res) => {
     try {
@@ -323,15 +373,15 @@ export const countReturnsToday = async () => {
 export const getStatsOverview = async (req, res) => {
     try {
         const [totalBooksResponse, totalUsersResponse, availableBooksResponse] = await Promise.all([
-            axios.get('http://localhost:8082/api/books/count').catch(() => {
-                throw new Error("Book Service unavailable");
-            }),
-            axios.get('http://localhost:8081/api/users/count').catch(() => {
-                throw new Error("User Service unavailable");
-            }),
-            axios.get('http://localhost:8082/api/books/available-count').catch(() => {
-                throw new Error("Book Service unavailable");
-            })
+            bookServiceBreaker.execute(() =>
+                axios.get('http://book-service:8082/api/books/count', { timeout: 5000 })
+            ),
+            userServiceBreaker.execute(() =>
+                axios.get('http://user-service:8081/api/users/count', { timeout: 5000 })
+            ),
+            bookServiceBreaker.execute(() =>
+                axios.get('http://book-service:8082/api/books/available-count', { timeout: 5000 })
+            )
         ]);
 
         const totalBooks = totalBooksResponse.data.count;
@@ -353,7 +403,7 @@ export const getStatsOverview = async (req, res) => {
             returns_today: returnsToday
         });
     } catch (error) {
-        res.status(error.message.includes("Service unavailable") ? 503 : 500).json({
+        res.status(error.message.includes('circuit breaker is OPEN') ? 503 : 500).json({
             message: "Error fetching stats overview",
             error: error.message
         });

@@ -1,6 +1,57 @@
 import Book from '../models/Book.js';
 import axios from 'axios';
 
+
+const CircuitBreakerStates = {
+    CLOSED: 'CLOSED',
+    OPEN: 'OPEN',
+    HALF_OPEN: 'HALF_OPEN'
+};
+
+
+class CircuitBreaker {
+    constructor(serviceName, timeout = 5000) {
+        this.serviceName = serviceName;
+        this.state = CircuitBreakerStates.CLOSED;
+        this.failureCount = 0;
+        this.failureThreshold = 3;
+        this.resetAfter = 30000; // 30 seconds
+        this.timeout = timeout;
+        this.lastFailureTime = null;
+    }
+
+    async execute(requestFn) {
+        if (this.state === CircuitBreakerStates.OPEN) {
+            if (Date.now() - this.lastFailureTime > this.resetAfter) {
+                this.state = CircuitBreakerStates.HALF_OPEN;
+            }
+            throw new Error(`${this.serviceName} service circuit breaker is ${this.state}`);
+            
+        }
+
+
+        try {
+            const response = await requestFn();
+            if (this.state === CircuitBreakerStates.HALF_OPEN) {
+                this.state = CircuitBreakerStates.CLOSED;
+                this.failureCount = 0;
+            }
+            return response;
+        } catch (error) {
+            this.failureCount++;
+            this.lastFailureTime = Date.now();
+            
+            if (this.failureCount >= this.failureThreshold) {
+                this.state = CircuitBreakerStates.OPEN;
+            }
+            
+            throw error;
+        }
+    }
+}
+
+const loanServiceBreaker = new CircuitBreaker('LoanService');
+
 export const addBook = async (req, res) => {
     try {
         const { title, author, isbn, copies } = req.body;
@@ -134,9 +185,9 @@ export const deleteBook = async (req, res) => {
 
 export const getPopularBooks = async (req, res) => {
     try {
-        const response = await axios.get('http://localhost:8083/api/loans/book-stats').catch(() => {
-            throw new Error("Loan Service unavailable");
-        });
+        const response = await loanServiceBreaker.execute(() =>
+            axios.get('http://loan-service:8083/api/loans/book-stats', { timeout: 5000 })
+        );
         const loanCounts = response.data;
 
         const popularBooks = [];
@@ -154,25 +205,28 @@ export const getPopularBooks = async (req, res) => {
 
         res.status(200).json(popularBooks);
     } catch (error) {
-        res.status(500).json({ message: "Error fetching popular books", error: error.message });
+        res.status(error.message.includes('circuit breaker is OPEN') ? 503 : 500).json({
+            message: "Error fetching popular books",
+            error: error.message
+        });
     }
 };
 
-export const countBooks = async (req,res) => {
+export const countBooks = async (req, res) => {
     try {
         const booksCount = await Book.countDocuments();
         res.status(200).json({ count: booksCount });
     } catch (error) {
         console.error("Error counting books:", error);
-        throw new Error("Error counting books: " + error.message);
+        res.status(500).json({ message: "Error counting books", error: error.message });
     }
 };
 
-export const countAvailableBooks = async (req,res) => {
+export const countAvailableBooks = async (req, res) => {
     try {
         const availableBooksCount = await Book.find({ available_copies: { $gt: 0 } });
         res.status(200).json({ count: availableBooksCount.length });
     } catch (error) {
-        throw new Error("Error counting available books: " + error.message);
+        res.status(500).json({ message: "Error counting available books", error: error.message });
     }
 };

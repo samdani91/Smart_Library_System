@@ -1,6 +1,55 @@
 import User from '../models/User.js';
 import axios from 'axios';
 
+const CircuitBreakerStates = {
+    CLOSED: 'CLOSED',
+    OPEN: 'OPEN',
+    HALF_OPEN: 'HALF_OPEN'
+};
+
+class CircuitBreaker {
+    constructor(serviceName, timeout = 5000) {
+        this.serviceName = serviceName;
+        this.state = CircuitBreakerStates.CLOSED;
+        this.failureCount = 0;
+        this.failureThreshold = 3;
+        this.resetAfter = 30000;
+        this.timeout = timeout;
+        this.lastFailureTime = null;
+    }
+
+    async execute(requestFn) {
+        
+        if (this.state === CircuitBreakerStates.OPEN) {
+            if (Date.now() - this.lastFailureTime > this.resetAfter) {
+                this.state = CircuitBreakerStates.HALF_OPEN;
+            }
+            throw new Error(`${this.serviceName} service circuit breaker is ${this.state}`);
+            
+        }
+
+        try {
+            const response = await requestFn();
+            if (this.state === CircuitBreakerStates.HALF_OPEN) {
+                this.state = CircuitBreakerStates.CLOSED;
+                this.failureCount = 0;
+            }
+            return response;
+        } catch (error) {
+            this.failureCount++;
+            this.lastFailureTime = Date.now();
+            
+            if (this.failureCount >= this.failureThreshold) {
+                this.state = CircuitBreakerStates.OPEN;
+            }
+            
+            throw error;
+        }
+    }
+}
+
+const loanServiceBreaker = new CircuitBreaker('LoanService');
+
 export const createUser = async (req, res) => {
     try {
         const { name, email, role } = req.body;
@@ -63,9 +112,9 @@ export const updateUser = async (req, res) => {
 
 export const getActiveUsers = async (req, res) => {
     try {
-        const response = await axios.get('http://localhost:8083/api/loans/active-users').catch(() => {
-            throw new Error("Loan Service unavailable");
-        });
+        const response = await loanServiceBreaker.execute(() =>
+            axios.get('http://loan-service:8083/api/loans/active-users', { timeout: 5000 })
+        );
         const activeLoans = response.data;
 
         const activeUsers = [];
@@ -83,7 +132,10 @@ export const getActiveUsers = async (req, res) => {
 
         res.status(200).json(activeUsers);
     } catch (error) {
-        res.status(500).json({ message: "Error fetching active users", error: error.message });
+        res.status(error.message.includes('circuit breaker is OPEN') ? 503 : 500).json({
+            message: "Error fetching active users",
+            error: error.message
+        });
     }
 };
 
