@@ -11,8 +11,8 @@ const router = express.Router();
 
 router.post('/', createUser);
 router.get('/count',countUsers);
+router.get('/stats/active', getActiveUsers);
 router.get('/:id', getUserById);
 router.put('/:id', updateUser);
-router.get('/stats/active', getActiveUsers);
 
 export default router;

@@ -253,45 +253,6 @@ export const extendLoan = async (req, res) => {
     }
 };
 
-export const getStatsOverview = async (req, res) => {
-    try {
-        const [totalBooksResponse, totalUsersResponse, availableBooksResponse] = await Promise.all([
-            axios.get('http://localhost:8082/api/books/count').catch(() => {
-                throw new Error("Book Service unavailable");
-            }),
-            axios.get('http://localhost:8081/api/users/count').catch(() => {
-                throw new Error("User Service unavailable");
-            }),
-            axios.get('http://localhost:8082/api/books/available-count').catch(() => {
-                throw new Error("Book Service unavailable");
-            })
-        ]);
-
-        const totalBooks = totalBooksResponse.data.count;
-        const totalUsers = totalUsersResponse.data.count;
-        const booksAvailable = availableBooksResponse.data.count;
-
-        const booksBorrowed = await countActiveLoans();
-        const overdueLoans = await countOverdueLoans();
-        const loansToday = await countLoansToday();
-        const returnsToday = await countReturnsToday();
-
-        res.status(200).json({
-            total_books: totalBooks,
-            total_users: totalUsers,
-            books_available: booksAvailable,
-            books_borrowed: booksBorrowed,
-            overdue_loans: overdueLoans,
-            loans_today: loansToday,
-            returns_today: returnsToday
-        });
-    } catch (error) {
-        res.status(error.message.includes("Service unavailable") ? 503 : 500).json({
-            message: "Error fetching stats overview",
-            error: error.message
-        });
-    }
-};
 
 export const getLoanCountsByBook = async (req, res) => {
     try {
@@ -356,5 +317,45 @@ export const countReturnsToday = async () => {
         });
     } catch (error) {
         throw new Error("Error counting returns today: " + error.message);
+    }
+};
+
+export const getStatsOverview = async (req, res) => {
+    try {
+        const [totalBooksResponse, totalUsersResponse, availableBooksResponse] = await Promise.all([
+            axios.get('http://localhost:8082/api/books/count').catch(() => {
+                throw new Error("Book Service unavailable");
+            }),
+            axios.get('http://localhost:8081/api/users/count').catch(() => {
+                throw new Error("User Service unavailable");
+            }),
+            axios.get('http://localhost:8082/api/books/available-count').catch(() => {
+                throw new Error("Book Service unavailable");
+            })
+        ]);
+
+        const totalBooks = totalBooksResponse.data.count;
+        const totalUsers = totalUsersResponse.data.count;
+        const booksAvailable = availableBooksResponse.data.count;
+
+        const booksBorrowed = await countActiveLoans();
+        const overdueLoans = await countOverdueLoans();
+        const loansToday = await countLoansToday();
+        const returnsToday = await countReturnsToday();
+
+        res.status(200).json({
+            total_books: totalBooks,
+            total_users: totalUsers,
+            books_available: booksAvailable,
+            books_borrowed: booksBorrowed,
+            overdue_loans: overdueLoans,
+            loans_today: loansToday,
+            returns_today: returnsToday
+        });
+    } catch (error) {
+        res.status(error.message.includes("Service unavailable") ? 503 : 500).json({
+            message: "Error fetching stats overview",
+            error: error.message
+        });
     }
 };

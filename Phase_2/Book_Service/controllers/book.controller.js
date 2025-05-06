@@ -158,18 +158,20 @@ export const getPopularBooks = async (req, res) => {
     }
 };
 
-export const countBooks = async () => {
+export const countBooks = async (req,res) => {
     try {
-        return await Book.countDocuments();
+        const booksCount = await Book.countDocuments();
+        res.status(200).json({ count: booksCount });
     } catch (error) {
+        console.error("Error counting books:", error);
         throw new Error("Error counting books: " + error.message);
     }
 };
 
-export const countAvailableBooks = async () => {
+export const countAvailableBooks = async (req,res) => {
     try {
-        const books = await Book.find({ available_copies: { $gt: 0 } });
-        return books.length;
+        const availableBooksCount = await Book.find({ available_copies: { $gt: 0 } });
+        res.status(200).json({ count: availableBooksCount.length });
     } catch (error) {
         throw new Error("Error counting available books: " + error.message);
     }
