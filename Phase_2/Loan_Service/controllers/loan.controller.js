@@ -56,7 +56,7 @@ export const issueBook = async (req, res) => {
     try {
         const { user_id, book_id, due_date } = req.body;
 
-        // Validate user
+
         const userResponse = await userServiceBreaker.execute(() =>
             axios.get(`http://user-service:8081/api/users/${user_id}`, { timeout: 5000 })
         );
@@ -64,7 +64,7 @@ export const issueBook = async (req, res) => {
             return res.status(404).json({ message: "User not found" });
         }
 
-        // Validate book
+
         const bookResponse = await bookServiceBreaker.execute(() =>
             axios.get(`http://book-service:8082/api/books/${book_id}`, { timeout: 5000 })
         );
@@ -76,14 +76,13 @@ export const issueBook = async (req, res) => {
             return res.status(400).json({ message: "Book is not available" });
         }
 
-        // Update book availability
+
         await bookServiceBreaker.execute(() =>
             axios.patch(`http://book-service:8082/api/books/${book_id}/availability`, {
                 operation: "decrement"
             }, { timeout: 5000 })
         );
 
-        // Create loan
         const loan = new Loan({
             user_id,
             book_id,
@@ -116,14 +115,13 @@ export const returnBook = async (req, res) => {
             return res.status(404).json({ message: "Loan not found or already returned" });
         }
 
-        // Update book availability
+
         await bookServiceBreaker.execute(() =>
             axios.patch(`http://book-service:8082/api/books/${loan.book_id}/availability`, {
                 operation: "increment"
             }, { timeout: 5000 })
         );
 
-        // Update loan
         loan.return_date = new Date();
         loan.status = 'RETURNED';
         await loan.save();
