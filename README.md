@@ -33,7 +33,7 @@ In this phase, we decompose the monolith into **independent services**, each res
 - Managing independent databases for each service  
 - Concepts of **loose coupling** and **bounded contexts**
 
-📁 To be added: `/Phase_2`
+📁 To be added: [`/Phase_2`](./Phase_2)
 
 ---
 
