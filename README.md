@@ -48,7 +48,7 @@ We integrate **Nginx** as a reverse proxy to manage internal routing and externa
 - Centralized control of HTTPS, caching, static files  
 - Load balancing and API gateway concepts  
 
-📁 To be added: `/Phase_3`
+📁 To be added: [`/Phase_3`](./Phase_3)
 
 ---
 
