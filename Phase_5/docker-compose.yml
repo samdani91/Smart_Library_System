@@ -1,0 +1,58 @@
+version: '3.8'
+
+services:
+  mongo:
+    image: mongo
+    container_name: mongodb
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongo_data:/data/db
+
+  user-backend:
+    build: ./User_Service
+    container_name: user-service
+    ports:
+      - "8081:8081"
+    depends_on:
+      - mongo
+    environment:
+      PORT: 8081
+      DATABASE_URL: mongodb://mongo/user_db
+
+  book-backend:
+    build: ./Book_Service
+    container_name: book-service
+    ports:
+      - "8082:8082"
+    depends_on:
+      - mongo
+    environment:
+      PORT: 8082
+      DATABASE_URL: mongodb://mongo/book_db
+
+  loan-backend:
+    build: ./Loan_Service
+    container_name: loan-service
+    ports:
+      - "8083:8083"
+    depends_on:
+      - mongo
+    environment:
+      PORT: 8083
+      DATABASE_URL: mongodb://mongo/loan_db
+
+  nginx:
+    image: nginx
+    container_name: library-nginx
+    ports:
+      - "80:80"
+    volumes:
+      - ./nginx.conf:/etc/nginx/nginx.conf:ro
+    depends_on:
+      - user-backend
+      - book-backend
+      - loan-backend
+
+volumes:
+  mongo_data:
