@@ -1,119 +1,74 @@
-# 📁 Phase_3 – Reverse Proxy with Nginx
+# 📁 Phase_5 – Containerization with Docker & Managing with Docker Compose
 
 ## 📌 Overview
 
-This phase introduces Nginx as a reverse proxy, acting as the single entry point to route traffic to backend microservices with Phase_2 .
+This phase introduces **NGINX as a reverse proxy** and uses **Docker Compose** to orchestrate the Smart Library System's services. It routes incoming requests to different backend microservices and handles centralized logging and error management.
+
 ---
+
 ## 📦 Topics Covered
 
-- ✅ Installing and configuring Nginx on Linux  
-- ✅ Understanding `nginx.conf` structure and virtual hosts  
-- ✅ Path-based routing:
+- ✅ Dockerizing backend services (User, Book, Loan)
+- ✅ Installing and configuring NGINX
+- ✅ Setting up NGINX as a reverse proxy with Docker
+- ✅ Path-based routing using NGINX:
   - `/api/users` → User Service  
   - `/api/books` → Book Service  
   - `/api/loans` → Loan Service  
-- ✅ Static file delivery for frontend (optional)  
-- ✅ Centralized request logging  
-- ✅ Handling 404s and upstream errors  
+- ✅ Centralized request logging
+- ✅ Handling 404 and upstream errors via custom error responses
+- ✅ Managing MongoDB with Docker volume
+- ✅ Using `.env` variables inside Docker containers
 
 ---
 
-## DNS Setup
+## 📁 Project Structure
 
-Go to etc directory 
+Smart_Library_System/Phase_5/
 
-```bash
-  cd /etc
-```
+- docker-compose.yml
+- nginx.conf
+- User_Service/
+- Book_Service/
+- Loan_Service/
 
-Open hosts file
 
-```bash
-  sudo gedit hosts
-```
-Add these lines at the end of the file and save
-```bash
-  127.0.0.1 library-app.com
-  127.0.0.1 user-service
-  127.0.0.1 book-service
-  127.0.0.1 loan-service
-```
+---
 
-## Nginx Setup
+## ⚙️ DNS Setup (Optional for Localhost Resolution)
 
-Install nginx
+Edit your system's `hosts` file to resolve domain names used in NGINX config:
 
 ```bash
-  sudo apt update
-  sudo apt install nginx
+sudo nano /etc/hosts
+127.0.0.1 library-app.com
+127.0.0.1 user-service
+127.0.0.1 book-service
+127.0.0.1 loan-service
+```
+Save & exit.
+
+### 🚀 Running the Application with Docker Compose
+Ensure Docker and Docker Compose are installed on your machine.
+
+- Clone the Repository
+```
+git clone https://github.com/samdani91/Smart_Library_System.git
+cd Smart_Library_System/Phase_5
 ```
 
-Create Configuration
-
-```bash
-  sudo nano /etc/nginx/nginx.conf
-  # Paste contents of nginx.txt  here
-```
-Test Configuration
-```bash
-  sudo nginx -t
-```
-
-Apply Configuration
-```bash
-  sudo systemctl reload nginx
-```
-
-Monitor Logs
-```bash
-  sudo tail -f /var/log/nginx/error.log
-```
-
-## Environment Variables
-
-To run this project, you will need to add the following environment variables to your .env file
-
-`PORT`
-
-`DATABASE_URL`
-
-
-## Run Locally
-
-Clone the project
-
-```bash
-  git clone https://github.com/samdani91/Smart_Library_System.git
-```
-
-Go to the project directory
-
-```bash
-  cd Phase_2
-```
-
-Go to the each service directory
-
-```bash
-  cd User_Service
-  cd Book_Service
-  cd Loan_Service
-```
-
-Install dependencies in each service directory
-
-```bash
-  npm install
-```
-Run MongoDB Service
-
-```bash
-  sudo systemctl start mongod.service
+### 🧪 Running the App
+Start all containers and build if needed:
 
 ```
-
-Start the server
-
-```bash
-  npm run dev
+docker-compose up -d --build
 ```
+
+### 📂 Access Services
+Once running, you can access your APIs through NGINX:
+
+http://library-app.com/api/users → User Service
+
+http://library-app.com/api/books → Book Service
+
+http://library-app.com/api/loans → Loan Service
