@@ -33,7 +33,7 @@ In this phase, we decompose the monolith into **independent services**, each res
 - Managing independent databases for each service  
 - Concepts of **loose coupling** and **bounded contexts**
 
-📁 To be added: [`/Phase_2`](./Phase_2)
+📁 See: [`/Phase_2`](./Phase_2)
 
 ---
 
@@ -48,7 +48,7 @@ We integrate **Nginx** as a reverse proxy to manage internal routing and externa
 - Centralized control of HTTPS, caching, static files  
 - Load balancing and API gateway concepts  
 
-📁 To be added: [`/Phase_3`](./Phase_3)
+📁 See: [`/Phase_3`](./Phase_3)
 
 ---
 
@@ -63,7 +63,7 @@ Each microservice is **containerized using Docker**, ensuring consistent runtime
 - Isolating environments with Docker networks and volumes  
 - Best practices for image management  
 
-📁 To be added: [`/Phase_5`](./Phase_5)
+📁 See: [`/Phase_5`](./Phase_5)
 
 ---
 
@@ -78,7 +78,7 @@ With more moving parts, we adopt **Docker Compose** to orchestrate and run multi
 - Inter-service networking and shared volumes  
 - Simplifying local development and CI workflows  
 
-📁 To be added: [`/Phase_5`](./Phase_5)
+📁 See: [`/Phase_5`](./Phase_5)
 
 ---
 
